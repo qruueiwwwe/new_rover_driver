@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from setuptools import setup
 
 package_name = 'new_rover_driver'
