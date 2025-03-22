@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>机器人控制面板</title>
+    <script src="https://static.robotwebtools.org/roslibjs/current/roslib.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        
+        .container {
+            display: flex;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .left-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .right-panel {
+            flex: 2;
+        }
+        
+        .group-box {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .group-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .motion-control {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        
+        .light-control {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        
+        .function-control {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        button {
+            padding: 15px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        button:active {
+            background-color: #3d8b40;
+        }
+        
+        .stop-btn {
+            background-color: #f44336;
+        }
+        
+        .stop-btn:hover {
+            background-color: #da190b;
+        }
+        
+        .camera-view {
+            width: 100%;
+            height: 480px;
+            background-color: #333;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .status-info {
+            margin-top: 10px;
+            font-size: 16px;
+            color: #666;
+        }
+        
+        #camera-feed {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="left-panel">
+            <!-- 运动控制 -->
+            <div class="group-box">
+                <div class="group-title">运动控制</div>
+                <div class="motion-control">
+                    <button></button>
+                    <button id="forward-btn">前进</button>
+                    <button></button>
+                    <button id="left-btn">左转</button>
+                    <button class="stop-btn" id="stop-btn">停止</button>
+                    <button id="right-btn">右转</button>
+                    <button></button>
+                    <button id="backward-btn">后退</button>
+                    <button></button>
+                </div>
+            </div>
+            
+            <!-- 灯光控制 -->
+            <div class="group-box">
+                <div class="group-title">灯光控制</div>
+                <div class="light-control">
+                    <button id="red-btn">红灯</button>
+                    <button id="green-btn">绿灯</button>
+                    <button id="blue-btn">蓝灯</button>
+                    <button id="yellow-btn">黄灯</button>
+                    <button id="flow-btn">流水灯</button>
+                    <button id="breath-btn">呼吸灯</button>
+                </div>
+            </div>
+            
+            <!-- 功能控制 -->
+            <div class="group-box">
+                <div class="group-title">功能控制</div>
+                <div class="function-control">
+                    <button id="start-btn">启动驱动</button>
+                    <button id="line-follow-btn">启动循线</button>
+                    <button id="save-map-btn">保存地图</button>
+                </div>
+            </div>
+            
+            <!-- 状态信息 -->
+            <div class="group-box">
+                <div class="group-title">状态信息</div>
+                <div class="status-info">
+                    <div id="voltage">电池电压: 0.0V</div>
+                    <div id="status">状态: 未启动</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="right-panel">
+            <!-- 摄像头画面 -->
+            <div class="group-box">
+                <div class="group-title">摄像头画面</div>
+                <div class="camera-view">
+                    <img id="camera-feed" src="" alt="等待摄像头画面">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 连接到ROS
+        var ros = new ROSLIB.Ros({
+            url: 'ws://localhost:9090'
+        });
+
+        ros.on('connection', function() {
+            console.log('已连接到ROS服务器');
+            document.getElementById('status').textContent = '状态: 已连接到ROS';
+        });
+
+        ros.on('error', function(error) {
+            console.log('连接错误:', error);
+            document.getElementById('status').textContent = '状态: 连接错误';
+        });
+
+        ros.on('close', function() {
+            console.log('连接已关闭');
+            document.getElementById('status').textContent = '状态: 未连接';
+        });
+
+        // 创建发布者
+        var cmdVelPub = new ROSLIB.Topic({
+            ros: ros,
+            name: '/cmd_vel',
+            messageType: 'geometry_msgs/msg/Twist'
+        });
+
+        var rgbLightPub = new ROSLIB.Topic({
+            ros: ros,
+            name: '/RGBLight',
+            messageType: 'std_msgs/msg/Int32'
+        });
+
+        // 订阅电池电压
+        var voltageSub = new ROSLIB.Topic({
+            ros: ros,
+            name: '/voltage',
+            messageType: 'std_msgs/msg/Float32'
+        });
+
+        voltageSub.subscribe(function(message) {
+            document.getElementById('voltage').textContent = 
+                `电池电压: ${message.data.toFixed(2)}V`;
+        });
+
+        // 运动控制函数
+        function moveRobot(linear, angular) {
+            var twist = new ROSLIB.Message({
+                linear: { x: linear, y: 0, z: 0 },
+                angular: { x: 0, y: 0, z: angular }
+            });
+            cmdVelPub.publish(twist);
+        }
+
+        function stopRobot() {
+            moveRobot(0, 0);
+        }
+
+        // 设置RGB灯光
+        function setLight(command) {
+            var msg = new ROSLIB.Message({
+                data: command
+            });
+            rgbLightPub.publish(msg);
+        }
+
+        // 绑定按钮事件
+        document.getElementById('forward-btn').addEventListener('mousedown', () => moveRobot(0.5, 0));
+        document.getElementById('backward-btn').addEventListener('mousedown', () => moveRobot(-0.5, 0));
+        document.getElementById('left-btn').addEventListener('mousedown', () => moveRobot(0, 0.5));
+        document.getElementById('right-btn').addEventListener('mousedown', () => moveRobot(0, -0.5));
+        
+        ['forward-btn', 'backward-btn', 'left-btn', 'right-btn'].forEach(id => {
+            document.getElementById(id).addEventListener('mouseup', stopRobot);
+            document.getElementById(id).addEventListener('mouseleave', stopRobot);
+        });
+        
+        document.getElementById('stop-btn').addEventListener('click', stopRobot);
+
+        // 灯光控制
+        document.getElementById('red-btn').addEventListener('click', () => setLight(11));
+        document.getElementById('green-btn').addEventListener('click', () => setLight(12));
+        document.getElementById('blue-btn').addEventListener('click', () => setLight(13));
+        document.getElementById('yellow-btn').addEventListener('click', () => setLight(14));
+        document.getElementById('flow-btn').addEventListener('click', () => setLight(15));
+        document.getElementById('breath-btn').addEventListener('click', () => setLight(17));
+
+        // 功能控制
+        document.getElementById('start-btn').addEventListener('click', function() {
+            var client = new ROSLIB.Service({
+                ros: ros,
+                name: '/start_driver',
+                serviceType: 'std_srvs/srv/SetBool'
+            });
+
+            var request = new ROSLIB.ServiceRequest({
+                data: this.textContent === '启动驱动'
+            });
+
+            client.callService(request, function(result) {
+                if (result.success) {
+                    document.getElementById('start-btn').textContent = 
+                        request.data ? '停止驱动' : '启动驱动';
+                    document.getElementById('status').textContent = 
+                        `状态: ${request.data ? '已启动' : '未启动'}`;
+                }
+            });
+        });
+
+        // 图像显示
+        var imageListener = new ROSLIB.Topic({
+            ros: ros,
+            name: '/camera/rgb/image_raw',
+            messageType: 'sensor_msgs/msg/Image'
+        });
+
+        imageListener.subscribe(function(message) {
+            // 将ROS图像消息转换为base64
+            var imageData = "data:image/jpeg;base64," + btoa(String.fromCharCode.apply(null, message.data));
+            document.getElementById('camera-feed').src = imageData;
+        });
+    </script>
+</body>
+</html> 

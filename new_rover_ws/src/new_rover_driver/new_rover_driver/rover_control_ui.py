@@ -188,12 +188,22 @@ class RoverControlUI(QMainWindow):
         
     def move_robot(self, linear, angular):
         cmd = Twist()
-        cmd.linear.x = linear
-        cmd.angular.z = angular
+        cmd.linear.x = float(linear)
+        cmd.linear.y = 0.0
+        cmd.linear.z = 0.0
+        cmd.angular.x = 0.0
+        cmd.angular.y = 0.0
+        cmd.angular.z = float(angular)
         self.cmd_vel_pub.publish(cmd)
         
     def stop_robot(self):
         cmd = Twist()
+        cmd.linear.x = 0.0
+        cmd.linear.y = 0.0
+        cmd.linear.z = 0.0
+        cmd.angular.x = 0.0
+        cmd.angular.y = 0.0
+        cmd.angular.z = 0.0
         self.cmd_vel_pub.publish(cmd)
         
     def set_light(self, command):
