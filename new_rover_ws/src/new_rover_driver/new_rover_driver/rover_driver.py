@@ -46,8 +46,8 @@ class RoverDriver(Node):
         # 初始化状态变量
         self.is_running = False
         # self.current_pose = PoseStamped()
-        self.current_pose.header.frame_id = "map"
-        self.current_pose.pose.orientation.w = 1.0
+        # self.current_pose.header.frame_id = "map"
+        # self.current_pose.pose.orientation.w = 1.0
         self.current_velocity = Twist()
         self.latest_scan = None
         self.latest_depth = None
