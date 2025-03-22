@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from pathlib import Path
 import rclpy
 from rclpy.node import Node
 from rclpy.time import Time
 from rclpy.duration import Duration
 from rclpy.clock import Clock
-from geometry_msgs.msg import Twist, PoseStamped, Path
+# from geometry_msgs.msg import Twist, PoseStamped, Path
 from sensor_msgs.msg import LaserScan, Image, Imu, MagneticField, JointState
 from nav_msgs.msg import OccupancyGrid
 from std_msgs.msg import Bool, Int32, Float32
@@ -45,7 +46,7 @@ class RoverDriver(Node):
         
         # 初始化状态变量
         self.is_running = False
-        self.current_pose = PoseStamped()
+        # self.current_pose = PoseStamped()
         self.current_pose.header.frame_id = "map"
         self.current_pose.pose.orientation.w = 1.0
         self.current_velocity = Twist()
@@ -61,7 +62,7 @@ class RoverDriver(Node):
         
         # 创建发布器
         self.cmd_vel_pub = self.create_publisher(Twist, 'cmd_vel', 10)
-        self.path_pub = self.create_publisher(Path, 'planned_path', 10)
+        # self.path_pub = self.create_publisher(Path, 'planned_path', 10)
         self.map_pub = self.create_publisher(OccupancyGrid, 'map', 10)
         self.battery_pub = self.create_publisher(Float32, 'voltage', 100)
         self.version_pub = self.create_publisher(Float32, 'edition', 100)
@@ -77,7 +78,7 @@ class RoverDriver(Node):
         self.rgb_sub = self.create_subscription(Image, 'camera/rgb/image_raw', self.rgb_callback, 10)
         self.imu_sub = self.create_subscription(Imu, '/imu/data_raw', self.imu_callback, 10)
         self.mag_sub = self.create_subscription(MagneticField, '/imu/mag', self.mag_callback, 10)
-        self.goal_sub = self.create_subscription(PoseStamped, 'move_base_simple/goal', self.goal_callback, 10)
+        # self.goal_sub = self.create_subscription(PoseStamped, 'move_base_simple/goal', self.goal_callback, 10)
         self.voice_cmd_sub = self.create_subscription(Int32, 'voice_command', self.voice_command_callback, 10)
         
         # 创建服务
