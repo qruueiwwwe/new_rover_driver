@@ -141,6 +141,9 @@ class MockDataPublisher(Node):
             z = np.random.uniform(0, 2)
             points.append([x, y, z])
             
+        # 将点数据转换为numpy数组
+        points_array = np.array(points, dtype=np.float32)
+        
         # 设置点云字段
         msg.fields = [
             PointField(name='x', offset=0, datatype=PointField.FLOAT32, count=1),
@@ -148,18 +151,15 @@ class MockDataPublisher(Node):
             PointField(name='z', offset=8, datatype=PointField.FLOAT32, count=1),
         ]
         
-        # 打包点云数据
-        msg.point_step = 12  # 4 bytes * 3 fields
-        msg.row_step = msg.point_step * len(points)
-        msg.data = bytearray(msg.row_step)
-        
-        for i, point in enumerate(points):
-            offset = i * msg.point_step
-            msg.data[offset:offset+12] = struct.pack('fff', *point)
-            
+        # 设置点云属性
         msg.height = 1
         msg.width = len(points)
+        msg.point_step = 12  # 4 bytes * 3 fields
+        msg.row_step = msg.point_step * len(points)
         msg.is_dense = True
+        
+        # 直接使用numpy数组的字节表示
+        msg.data = points_array.tobytes()
         
         self.obstacle_pub.publish(msg)
 
