@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from pathlib import Path
 import rclpy
 from rclpy.node import Node
 from rclpy.time import Time
 from rclpy.duration import Duration
 from rclpy.clock import Clock
-# from geometry_msgs.msg import Twist, PoseStamped, Path
+from geometry_msgs.msg import Twist, Path
 from sensor_msgs.msg import LaserScan, Image, Imu, MagneticField, JointState
 from nav_msgs.msg import OccupancyGrid
 from std_msgs.msg import Bool, Int32, Float32
 from std_srvs.srv import SetBool
 import cv2
 import numpy as np
-import mediapipe as mp
+# import mediapipe as mp
 import math
 import threading
 import time
@@ -62,7 +61,7 @@ class RoverDriver(Node):
         
         # 创建发布器
         self.cmd_vel_pub = self.create_publisher(Twist, 'cmd_vel', 10)
-        # self.path_pub = self.create_publisher(Path, 'planned_path', 10)
+        self.path_pub = self.create_publisher(Path, 'planned_path', 10)
         self.map_pub = self.create_publisher(OccupancyGrid, 'map', 10)
         self.battery_pub = self.create_publisher(Float32, 'voltage', 100)
         self.version_pub = self.create_publisher(Float32, 'edition', 100)
@@ -88,11 +87,11 @@ class RoverDriver(Node):
         self.line_follow_srv = self.create_service(SetBool, 'line_follow', self.line_follow_callback)
         
         # 初始化MediaPipe
-        self.mp_pose = mp.solutions.pose
-        self.pose = self.mp_pose.Pose(
-            min_detection_confidence=0.5,
-            min_tracking_confidence=0.5
-        )
+        # self.mp_pose = mp.solutions.pose
+        # self.pose = self.mp_pose.Pose(
+        #     min_detection_confidence=0.5,
+        #     min_tracking_confidence=0.5
+        # )
         
         # 创建定时器
         self.timer = self.create_timer(0.1, self.timer_callback)
@@ -328,91 +327,59 @@ class RoverDriver(Node):
         if not self.latest_depth:
             return
             
-        try:
-            # 将ROS图像消息转换为OpenCV格式
-            depth_image = self.bridge.imgmsg_to_cv2(self.latest_depth, desired_encoding='passthrough')
-            
-            # 将深度值转换为米单位（如果需要）
-            depth_meters = depth_image.astype(float) / 1000.0
-            
-            # 创建深度掩码
-            mask = np.logical_and(depth_meters > self.min_depth,
-                                depth_meters < self.max_depth)
-            
-            # 对深度图进行归一化以便可视化
-            normalized_depth = cv2.normalize(depth_meters, None, 0, 255, cv2.NORM_MINMAX)
-            normalized_depth = normalized_depth.astype(np.uint8)
-            
-            # 应用彩色映射
-            depth_colormap = cv2.applyColorMap(normalized_depth, cv2.COLORMAP_JET)
-            
-            # 应用掩码
-            depth_colormap[~mask] = 0
-            
-            # 检测障碍物
-            obstacles = depth_meters < self.obstacle_threshold
-            if np.any(obstacles):
-                obstacle_positions = np.where(obstacles)
-                self.get_logger().warn(f'检测到 {len(obstacle_positions[0])} 个障碍物点')
-                
-                # 如果中心区域有障碍物，发出警告
-                center_region = obstacles[
-                    depth_meters.shape[0]//3:2*depth_meters.shape[0]//3,
-                    depth_meters.shape[1]//3:2*depth_meters.shape[1]//3
-                ]
-                if np.any(center_region):
-                    self.get_logger().warn('前方存在障碍物！')
-                    # 如果机器人正在移动，则停止
-                    if abs(self.current_velocity.linear.x) > 0 or abs(self.current_velocity.angular.z) > 0:
-                        self.stop()
-            
-            # 添加文本信息
-            cv2.putText(depth_colormap, 
-                       f'Min depth: {np.min(depth_meters):.2f}m', 
-                       (10, 30), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 
-                       1, 
-                       (255, 255, 255), 
-                       2)
-            cv2.putText(depth_colormap, 
-                       f'Max depth: {np.max(depth_meters):.2f}m', 
-                       (10, 60), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 
-                       1, 
-                       (255, 255, 255), 
-                       2)
-            
-            # 发布处理后的图像
-            processed_msg = self.bridge.cv2_to_imgmsg(depth_colormap, encoding='bgr8')
-            processed_msg.header = self.latest_depth.header
-            self.processed_image_pub.publish(processed_msg)
-            
-        except Exception as e:
-            self.get_logger().error(f'深度图像处理错误: {str(e)}')
+        # TODO: 实现深度图像处理
+        pass
 
     def process_rgb_image(self):
         """处理RGB图像"""
         if not self.latest_rgb:
             return
             
-        # 转换图像格式
         try:
+            # 转换图像格式
             cv_image = self.bridge.imgmsg_to_cv2(self.latest_rgb, "bgr8")
             
-            # 使用MediaPipe进行姿态检测
-            results = self.pose.process(cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB))
+            # 图像增强和处理
+            # 1. 转换到HSV颜色空间以便更好地处理颜色
+            hsv = cv2.cvtColor(cv_image, cv2.COLOR_BGR2HSV)
             
-            if results.pose_landmarks:
-                # 绘制关键点
-                mp_drawing = mp.solutions.drawing_utils
-                mp_drawing.draw_landmarks(
-                    cv_image,
-                    results.pose_landmarks,
-                    self.mp_pose.POSE_CONNECTIONS
-                )
+            # 2. 应用高斯模糊减少噪声
+            blurred = cv2.GaussianBlur(cv_image, (5, 5), 0)
+            
+            # 3. 边缘检测
+            edges = cv2.Canny(blurred, 50, 150)
+            
+            # 4. 寻找轮廓
+            contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            
+            # 5. 绘制主要轮廓
+            cv2.drawContours(cv_image, contours, -1, (0, 255, 0), 2)
+            
+            # 6. 添加文本信息
+            cv2.putText(cv_image,
+                       f'Objects: {len(contours)}',
+                       (10, 30),
+                       cv2.FONT_HERSHEY_SIMPLEX,
+                       1,
+                       (0, 255, 0),
+                       2)
+            
+            # 7. 如果检测到大物体，发出警告
+            large_objects = [cnt for cnt in contours if cv2.contourArea(cnt) > 1000]
+            if large_objects:
+                self.get_logger().info(f'检测到 {len(large_objects)} 个大物体')
                 
-                # 发布处理后的图像
-                self.image_pub.publish(self.bridge.cv2_to_imgmsg(cv_image, "bgr8"))
+                # 在图像中心区域检查物体
+                height, width = cv_image.shape[:2]
+                center_region = edges[height//3:2*height//3, width//3:2*width//3]
+                if np.any(center_region):
+                    self.get_logger().warn('前方检测到物体！')
+            
+            # 发布处理后的图像
+            processed_msg = self.bridge.cv2_to_imgmsg(cv_image, encoding='bgr8')
+            processed_msg.header = self.latest_rgb.header
+            self.processed_image_pub.publish(processed_msg)
+            
         except Exception as e:
             self.get_logger().error(f'图像处理错误: {str(e)}')
 
