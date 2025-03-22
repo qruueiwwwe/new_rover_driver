@@ -1,19 +1,19 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>机器人控制面板</title>
-    <!-- 添加本地备份的roslib.js -->
+    <title>Robot Control Panel</title>
+    <!-- Add local backup of roslib.js -->
     <script src="https://cdn.jsdelivr.net/npm/roslib@1.3.0/build/roslib.min.js"></script>
     <script>
-        // 检查ROSLIB是否正确加载
+        // Check if ROSLIB is loaded correctly
         window.onload = function() {
             if (typeof ROSLIB === 'undefined') {
-                console.error('ROSLIB库加载失败！');
-                alert('ROSLIB库加载失败，请检查网络连接！');
+                console.error('ROSLIB library failed to load!');
+                alert('ROSLIB library failed to load, please check network connection!');
             } else {
-                console.log('ROSLIB库加载成功！');
+                console.log('ROSLIB library loaded successfully!');
                 initROS();
             }
         };
@@ -127,61 +127,59 @@
 <body>
     <div class="container">
         <div class="left-panel">
-            <!-- 运动控制 -->
+            <!-- Motion Control -->
             <div class="group-box">
-                <div class="group-title">运动控制</div>
+                <div class="group-title">Motion Control</div>
                 <div class="motion-control">
                     <button></button>
-                    <button id="forward-btn">前进</button>
+                    <button id="forward-btn">Forward</button>
                     <button></button>
-                    <button id="left-btn">左转</button>
-                    <button class="stop-btn" id="stop-btn">停止</button>
-                    <button id="right-btn">右转</button>
+                    <button id="left-btn">Left</button>
+                    <button class="stop-btn" id="stop-btn">Stop</button>
+                    <button id="right-btn">Right</button>
                     <button></button>
-                    <button id="backward-btn">后退</button>
+                    <button id="backward-btn">Backward</button>
                     <button></button>
                 </div>
             </div>
             
-            <!-- 灯光控制 -->
+            <!-- Light Control -->
             <div class="group-box">
-                <div class="group-title">灯光控制</div>
+                <div class="group-title">Light Control</div>
                 <div class="light-control">
-                    <button id="red-btn">红灯</button>
-                    <button id="green-btn">绿灯</button>
-                    <button id="blue-btn">蓝灯</button>
-                    <button id="yellow-btn">黄灯</button>
-                    <button id="flow-btn">流水灯</button>
-                    <button id="breath-btn">呼吸灯</button>
+                    <button id="red-btn">Red</button>
+                    <button id="green-btn">Green</button>
+                    <button id="blue-btn">Blue</button>
+                    <button id="yellow-btn">Yellow</button>
+                    <button id="flow-btn">Flow</button>
+                    <button id="breath-btn">Breath</button>
                 </div>
             </div>
             
-            <!-- 功能控制 -->
+            <!-- Function Control -->
             <div class="group-box">
-                <div class="group-title">功能控制</div>
+                <div class="group-title">Function Control</div>
                 <div class="function-control">
-                    <button id="start-btn">启动驱动</button>
-                    <button id="line-follow-btn">启动循线</button>
-                    <button id="save-map-btn">保存地图</button>
+                    <button id="start-btn">Start Driver</button>
                 </div>
             </div>
             
-            <!-- 状态信息 -->
+            <!-- Status Information -->
             <div class="group-box">
-                <div class="group-title">状态信息</div>
+                <div class="group-title">Status Information</div>
                 <div class="status-info">
-                    <div id="voltage">电池电压: 0.0V</div>
-                    <div id="status">状态: 未启动</div>
+                    <div id="voltage">Battery Voltage: 0.0V</div>
+                    <div id="status">Status: Not Started</div>
                 </div>
             </div>
         </div>
         
         <div class="right-panel">
-            <!-- 摄像头画面 -->
+            <!-- Camera View -->
             <div class="group-box">
-                <div class="group-title">摄像头画面</div>
+                <div class="group-title">Camera View</div>
                 <div class="camera-view">
-                    <img id="camera-feed" src="" alt="等待摄像头画面">
+                    <img id="camera-feed" src="" alt="Waiting for camera feed">
                 </div>
             </div>
         </div>
@@ -189,51 +187,51 @@
 
     <script>
         function initROS() {
-            console.log('开始初始化ROS连接...');
+            console.log('Starting ROS connection initialization...');
             
-            // 连接到ROS
+            // Connect to ROS
             var ros = new ROSLIB.Ros({
                 url: 'ws://localhost:9090'
             });
 
             ros.on('connection', function() {
-                console.log('已连接到ROS服务器');
-                document.getElementById('status').textContent = '状态: 已连接到ROS';
+                console.log('Connected to ROS server');
+                document.getElementById('status').textContent = 'Status: Connected to ROS';
                 document.getElementById('status').style.color = 'green';
             });
 
             ros.on('error', function(error) {
-                console.error('ROS连接错误:', error);
-                document.getElementById('status').textContent = '状态: 连接错误';
+                console.error('ROS connection error:', error);
+                document.getElementById('status').textContent = 'Status: Connection Error';
                 document.getElementById('status').style.color = 'red';
             });
 
             ros.on('close', function() {
-                console.log('ROS连接已关闭');
-                document.getElementById('status').textContent = '状态: 未连接';
+                console.log('ROS connection closed');
+                document.getElementById('status').textContent = 'Status: Not Connected';
                 document.getElementById('status').style.color = 'red';
-                // 尝试重新连接
+                // Try to reconnect
                 setTimeout(function() {
-                    console.log('尝试重新连接...');
+                    console.log('Attempting to reconnect...');
                     ros.connect('ws://localhost:9090');
                 }, 2000);
             });
 
-            // 创建发布者
+            // Create publisher
             var cmdVelPub = new ROSLIB.Topic({
                 ros: ros,
                 name: '/cmd_vel',
                 messageType: 'geometry_msgs/Twist'
             });
 
-            console.log('已创建cmd_vel发布者');
+            console.log('Created cmd_vel publisher');
 
-            // 运动控制函数
+            // Motion control function
             function moveRobot(linear, angular) {
-                console.log('moveRobot被调用:', {linear: linear, angular: angular});
+                console.log('moveRobot called:', {linear: linear, angular: angular});
                 
                 if (!ros.isConnected) {
-                    console.error('ROS未连接，无法发送命令');
+                    console.error('ROS not connected, cannot send command');
                     return;
                 }
                 
@@ -250,57 +248,57 @@
                     }
                 });
                 
-                console.log('准备发送运动命令:', twist);
+                console.log('Preparing to send motion command:', twist);
                 try {
                     cmdVelPub.publish(twist);
-                    console.log('运动命令已发送');
+                    console.log('Motion command sent');
                 } catch (error) {
-                    console.error('发送命令错误:', error);
+                    console.error('Command send error:', error);
                 }
             }
 
-            // 绑定按钮事件
+            // Bind button events
             function bindMoveButton(buttonId, linear, angular) {
                 var button = document.getElementById(buttonId);
                 if (!button) {
-                    console.error('找不到按钮:', buttonId);
+                    console.error('Button not found:', buttonId);
                     return;
                 }
                 
-                console.log('正在绑定按钮:', buttonId);
+                console.log('Binding button:', buttonId);
                 
-                // 鼠标事件
+                // Mouse events
                 button.onmousedown = function(e) {
-                    console.log('按钮按下:', buttonId);
+                    console.log('Button pressed:', buttonId);
                     moveRobot(linear, angular);
                 };
                 
                 button.onmouseup = function(e) {
-                    console.log('按钮释放:', buttonId);
+                    console.log('Button released:', buttonId);
                     moveRobot(0, 0);
                 };
                 
                 button.onmouseleave = function(e) {
-                    console.log('鼠标离开按钮:', buttonId);
+                    console.log('Mouse left button:', buttonId);
                     moveRobot(0, 0);
                 };
                 
-                // 触摸事件
+                // Touch events
                 button.ontouchstart = function(e) {
                     e.preventDefault();
-                    console.log('触摸开始:', buttonId);
+                    console.log('Touch started:', buttonId);
                     moveRobot(linear, angular);
                 };
                 
                 button.ontouchend = function(e) {
                     e.preventDefault();
-                    console.log('触摸结束:', buttonId);
+                    console.log('Touch ended:', buttonId);
                     moveRobot(0, 0);
                 };
             }
 
-            // 绑定所有运动控制按钮
-            console.log('开始绑定运动控制按钮...');
+            // Bind all motion control buttons
+            console.log('Starting to bind motion control buttons...');
             bindMoveButton('forward-btn', 0.5, 0);
             bindMoveButton('backward-btn', -0.5, 0);
             bindMoveButton('left-btn', 0, 0.5);
@@ -309,12 +307,12 @@
             var stopBtn = document.getElementById('stop-btn');
             if (stopBtn) {
                 stopBtn.onclick = function() {
-                    console.log('停止按钮被点击');
+                    console.log('Stop button clicked');
                     moveRobot(0, 0);
                 };
             }
 
-            // RGB灯光控制
+            // RGB light control
             var rgbLightPub = new ROSLIB.Topic({
                 ros: ros,
                 name: '/RGBLight',
@@ -322,10 +320,10 @@
             });
 
             function setLight(command) {
-                console.log('setLight被调用:', command);
+                console.log('setLight called:', command);
                 
                 if (!ros.isConnected) {
-                    console.error('ROS未连接，无法发送灯光命令');
+                    console.error('ROS not connected, cannot send light command');
                     return;
                 }
                 
@@ -335,14 +333,14 @@
                 
                 try {
                     rgbLightPub.publish(msg);
-                    console.log('灯光命令已发送:', command);
+                    console.log('Light command sent:', command);
                 } catch (error) {
-                    console.error('发送灯光命令错误:', error);
+                    console.error('Light command send error:', error);
                 }
             }
 
-            // 绑定灯光控制按钮
-            console.log('开始绑定灯光控制按钮...');
+            // Bind light control buttons
+            console.log('Starting to bind light control buttons...');
             document.getElementById('red-btn').onclick = () => setLight(11);
             document.getElementById('green-btn').onclick = () => setLight(12);
             document.getElementById('blue-btn').onclick = () => setLight(13);
@@ -351,7 +349,7 @@
             document.getElementById('breath-btn').onclick = () => setLight(17);
         }
 
-        // 订阅电池电压
+        // Subscribe to battery voltage
         var voltageSub = new ROSLIB.Topic({
             ros: ros,
             name: '/voltage',
@@ -360,13 +358,13 @@
 
         voltageSub.subscribe(function(message) {
             document.getElementById('voltage').textContent = 
-                `电池电压: ${message.data.toFixed(2)}V`;
+                `Battery Voltage: ${message.data.toFixed(2)}V`;
         });
 
-        // 功能控制
+        // Function control
         document.getElementById('start-btn').addEventListener('click', function() {
             if (!ros.isConnected) {
-                console.log('ROS未连接，无法发送命令');
+                console.log('ROS not connected, cannot send command');
                 return;
             }
             
@@ -377,24 +375,24 @@
             });
 
             var request = new ROSLIB.ServiceRequest({
-                data: this.textContent === '启动驱动'
+                data: this.textContent === 'Start Driver'
             });
 
             try {
                 client.callService(request, function(result) {
                     if (result.success) {
                         document.getElementById('start-btn').textContent = 
-                            request.data ? '停止驱动' : '启动驱动';
+                            request.data ? 'Stop Driver' : 'Start Driver';
                         document.getElementById('status').textContent = 
-                            `状态: ${request.data ? '已启动' : '未启动'}`;
+                            `Status: ${request.data ? 'Started' : 'Not Started'}`;
                     }
                 });
             } catch (error) {
-                console.error('调用服务错误:', error);
+                console.error('Service call error:', error);
             }
         });
 
-        // 图像显示
+        // Image display
         var imageListener = new ROSLIB.Topic({
             ros: ros,
             name: '/camera/rgb/image_raw',
@@ -403,11 +401,11 @@
 
         imageListener.subscribe(function(message) {
             try {
-                // 将ROS图像消息转换为base64
+                // Convert ROS image message to base64
                 var imageData = "data:image/jpeg;base64," + btoa(String.fromCharCode.apply(null, message.data));
                 document.getElementById('camera-feed').src = imageData;
             } catch (error) {
-                console.error('图像处理错误:', error);
+                console.error('Image processing error:', error);
             }
         });
     </script>
