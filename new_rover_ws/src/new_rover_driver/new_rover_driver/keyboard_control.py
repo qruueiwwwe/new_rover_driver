@@ -14,22 +14,22 @@ class KeyboardControl(Node):
         super().__init__('keyboard_control')
         self.get_logger().info('Keyboard Control Node Started')
         
-        # 创建发布者
+        # Create publisher
         self.cmd_vel_pub = self.create_publisher(Twist, 'cmd_vel', 10)
         self.get_logger().info('Created cmd_vel publisher')
         
-        # 速度参数
+        # Speed parameters
         self.linear_speed = 0.5  # m/s
         self.angular_speed = 0.5  # rad/s
         
-        # 创建键盘控制线程
+        # Create keyboard control thread
         self.running = True
         self.keyboard_thread = threading.Thread(target=self.keyboard_loop)
         self.keyboard_thread.daemon = True
         self.keyboard_thread.start()
         
     def get_key(self):
-        """获取键盘输入"""
+        """Get keyboard input"""
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
         try:
@@ -40,7 +40,7 @@ class KeyboardControl(Node):
         return ch
         
     def keyboard_loop(self):
-        """键盘控制循环"""
+        """Keyboard control loop"""
         self.get_logger().info('Keyboard Control Started')
         self.get_logger().info('Use WASD keys to control the robot')
         self.get_logger().info('Press Q to quit')
@@ -75,7 +75,7 @@ class KeyboardControl(Node):
             
             time.sleep(0.1)
             
-        # 停止机器人
+        # Stop the robot
         cmd_vel = Twist()
         try:
             self.cmd_vel_pub.publish(cmd_vel)
