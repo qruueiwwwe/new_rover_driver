@@ -6,7 +6,7 @@ from rclpy.node import Node
 from rclpy.time import Time
 from rclpy.duration import Duration
 from rclpy.clock import Clock
-from geometry_msgs.msg import Twist, Path
+from geometry_msgs.msg import Twist
 from sensor_msgs.msg import LaserScan, Image, Imu, MagneticField, JointState
 from nav_msgs.msg import OccupancyGrid
 from std_msgs.msg import Bool, Int32, Float32
@@ -61,7 +61,7 @@ class RoverDriver(Node):
         
         # 创建发布器
         self.cmd_vel_pub = self.create_publisher(Twist, 'cmd_vel', 10)
-        self.path_pub = self.create_publisher(Path, 'planned_path', 10)
+        # self.path_pub = self.create_publisher(Path, 'planned_path', 10)
         self.map_pub = self.create_publisher(OccupancyGrid, 'map', 10)
         self.battery_pub = self.create_publisher(Float32, 'voltage', 100)
         self.version_pub = self.create_publisher(Float32, 'edition', 100)
@@ -217,16 +217,16 @@ class RoverDriver(Node):
             return
             
         # 简单的路径规划
-        path = Path()
-        path.header.frame_id = "map"
-        path.poses.append(self.current_pose)
-        path.poses.append(msg)
+        # path = Path()
+        # path.header.frame_id = "map"
+        # path.poses.append(self.current_pose)
+        # path.poses.append(msg)
         
-        # 发布规划路径
-        self.path_pub.publish(path)
+        # # 发布规划路径
+        # self.path_pub.publish(path)
         
-        # 执行运动
-        self.move_to_goal(msg)
+        # # 执行运动
+        # self.move_to_goal(msg)
 
     def voice_command_callback(self, msg):
         """语音命令回调"""
