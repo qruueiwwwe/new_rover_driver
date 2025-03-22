@@ -177,22 +177,29 @@
     <script>
         // 连接到ROS
         var ros = new ROSLIB.Ros({
-            url: 'ws://localhost:9090'
+            url: 'ws://localhost:9090'  // 确保端口是9090
         });
 
         ros.on('connection', function() {
             console.log('已连接到ROS服务器');
             document.getElementById('status').textContent = '状态: 已连接到ROS';
+            document.getElementById('status').style.color = 'green';
         });
 
         ros.on('error', function(error) {
             console.log('连接错误:', error);
             document.getElementById('status').textContent = '状态: 连接错误';
+            document.getElementById('status').style.color = 'red';
         });
 
         ros.on('close', function() {
             console.log('连接已关闭');
             document.getElementById('status').textContent = '状态: 未连接';
+            document.getElementById('status').style.color = 'red';
+            // 尝试重新连接
+            setTimeout(function() {
+                ros.connect('ws://localhost:9090');
+            }, 2000);
         });
 
         // 创建发布者
@@ -222,16 +229,72 @@
 
         // 运动控制函数
         function moveRobot(linear, angular) {
+            if (!ros.isConnected) {
+                console.log('ROS未连接，无法发送命令');
+                return;
+            }
+            
             var twist = new ROSLIB.Message({
-                linear: { x: linear, y: 0, z: 0 },
-                angular: { x: 0, y: 0, z: angular }
+                linear: {
+                    x: parseFloat(linear),
+                    y: 0.0,
+                    z: 0.0
+                },
+                angular: {
+                    x: 0.0,
+                    y: 0.0,
+                    z: parseFloat(angular)
+                }
             });
+            
+            console.log('发送运动命令:', twist);
             cmdVelPub.publish(twist);
         }
 
-        function stopRobot() {
-            moveRobot(0, 0);
+        // 绑定按钮事件 - 使用触摸和鼠标事件
+        function bindMoveButton(buttonId, linear, angular) {
+            var button = document.getElementById(buttonId);
+            
+            // 鼠标事件
+            button.addEventListener('mousedown', function() {
+                console.log('按下按钮:', buttonId);
+                moveRobot(linear, angular);
+            });
+            
+            button.addEventListener('mouseup', function() {
+                console.log('释放按钮:', buttonId);
+                moveRobot(0, 0);
+            });
+            
+            button.addEventListener('mouseleave', function() {
+                console.log('鼠标离开按钮:', buttonId);
+                moveRobot(0, 0);
+            });
+            
+            // 触摸事件
+            button.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                console.log('触摸开始:', buttonId);
+                moveRobot(linear, angular);
+            });
+            
+            button.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                console.log('触摸结束:', buttonId);
+                moveRobot(0, 0);
+            });
         }
+
+        // 绑定所有运动控制按钮
+        bindMoveButton('forward-btn', 0.5, 0);
+        bindMoveButton('backward-btn', -0.5, 0);
+        bindMoveButton('left-btn', 0, 0.5);
+        bindMoveButton('right-btn', 0, -0.5);
+        
+        document.getElementById('stop-btn').addEventListener('click', function() {
+            console.log('停止按钮被点击');
+            moveRobot(0, 0);
+        });
 
         // 设置RGB灯光
         function setLight(command) {
@@ -240,19 +303,6 @@
             });
             rgbLightPub.publish(msg);
         }
-
-        // 绑定按钮事件
-        document.getElementById('forward-btn').addEventListener('mousedown', () => moveRobot(0.5, 0));
-        document.getElementById('backward-btn').addEventListener('mousedown', () => moveRobot(-0.5, 0));
-        document.getElementById('left-btn').addEventListener('mousedown', () => moveRobot(0, 0.5));
-        document.getElementById('right-btn').addEventListener('mousedown', () => moveRobot(0, -0.5));
-        
-        ['forward-btn', 'backward-btn', 'left-btn', 'right-btn'].forEach(id => {
-            document.getElementById(id).addEventListener('mouseup', stopRobot);
-            document.getElementById(id).addEventListener('mouseleave', stopRobot);
-        });
-        
-        document.getElementById('stop-btn').addEventListener('click', stopRobot);
 
         // 灯光控制
         document.getElementById('red-btn').addEventListener('click', () => setLight(11));
