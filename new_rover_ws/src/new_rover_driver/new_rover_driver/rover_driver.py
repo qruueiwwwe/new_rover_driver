@@ -13,7 +13,6 @@ import time
 from math import cos, sin, pi, atan2
 from tf2_ros import TransformBroadcaster
 from tf2_ros import TransformListener, Buffer
-import mediapipe as mp
 from scipy.spatial import distance
 
 class RoverDriver(Node):
@@ -22,12 +21,6 @@ class RoverDriver(Node):
         
         # 初始化CV桥接器
         self.bridge = CvBridge()
-        
-        # 初始化MediaPipe
-        self.mp_pose = mp.solutions.pose
-        self.pose = self.mp_pose.Pose(
-            min_detection_confidence=0.5,
-            min_tracking_confidence=0.5)
             
         # 初始化TF广播器
         self.tf_broadcaster = TransformBroadcaster(self)
@@ -192,13 +185,9 @@ class RoverDriver(Node):
             # 处理RGB图像
             cv_image = self.bridge.imgmsg_to_cv2(msg, 'bgr8')
             
-            # MediaPipe姿态检测
-            results = self.pose.process(cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB))
-            if results.pose_landmarks:
-                # 绘制姿态关键点
-                mp.solutions.drawing_utils.draw_landmarks(
-                    cv_image, results.pose_landmarks, self.mp_pose.POSE_CONNECTIONS)
-                    
+            # 在这里可以添加其他图像处理功能
+            # 例如：边缘检测、颜色分割等
+            
             # 发布处理后的图像
             processed_msg = self.bridge.cv2_to_imgmsg(cv_image, encoding='bgr8')
             processed_msg.header = msg.header
